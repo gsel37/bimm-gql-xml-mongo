@@ -103,7 +103,7 @@ Go to
 http://localhost:3000/graphql
 ```
 
-And run requests as per your needs
+And run requests as needed:
 
 ![GraphQl sample](./docs/images/GraphQL%20playground.png)
 
