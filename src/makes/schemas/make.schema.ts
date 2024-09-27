@@ -9,7 +9,7 @@ export class Make {
   makeId: string;
 
   @Prop({ required: true })
-  name: string;
+  makeName: string;
 
   @Prop(raw([{ typeId: String, typeName: String }, { default: [] }]))
   vehicleTypes: Record<string, any>[];

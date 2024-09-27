@@ -5,7 +5,7 @@ type VehicleType {
 
 type Make {
   makeId: String!
-  name: String
+  makeName: String
   vehicleTypes: [VehicleType]
 }
 

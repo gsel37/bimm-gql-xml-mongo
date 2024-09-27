@@ -1,41 +1,98 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { xml as ALL_MAKES } from '../mocks/all-makes-data';
+// import { xml as ALL_MAKES } from '../mocks/all-makes-data';
 import { Make } from '../makes/schemas/make.schema';
 import { MakesService } from '../makes/makes.service';
 import { xmlParser } from './transformers/xmlParser';
 import { transformMakes } from './transformers/transform-makes';
 import { transformVehicleTypes } from './transformers/transform-vehicle-types';
+import * as constants from './gov-data.constants';
+import { InjectQueue } from '@nestjs/bull';
+import { Queue } from 'bull';
 
 @Injectable()
 export class GovDataService {
-  constructor(private readonly makesService: MakesService) {}
   private readonly logger = new Logger(GovDataService.name);
+  private readonly makesBatchQueue: Queue;
   private readonly allMakesXmlUrl =
-    'https://vpic.nhtsa.dot.gov/api/vehicles/getallmakes?format=XML';
-  private readonly vehicleTypesUrl =
-    'https://vpic.nhtsa.dot.gov/api/vehicles/GetVehicleTypesForMakeId/';
+    constants.GOV_DATA_URL + constants.GET_ALL_MAKES;
+  private readonly vehicleTypesUrl = constants.GET_VEHICLE_TYPES_FOR_MAKEID;
 
-  // get all makes
+  constructor(
+    private readonly makesService: MakesService,
+    @InjectQueue('makes-batch') makesBatchQueue: Queue,
+  ) {
+    this.makesBatchQueue = makesBatchQueue;
+  }
+
   async processAllMakes() {
-    const now = Date.now();
     this.logger.log('All makes refresh request has started...');
     const xmlString = await this.getAllMakesXml();
     const parserToJson = await xmlParser(xmlString);
     const transformed = transformMakes(parserToJson);
-    const batch = transformed.slice(50, 100);
-    const withVehicleTypes = await this.addVehicleTypes(batch);
-    const result = await this.saveAllMakes(withVehicleTypes);
-    this.logger.log(
-      `All makes refresh request is complete +${Date.now() - now}ms`,
-    );
+    const result = await this.batchMakes(transformed);
     return result;
   }
 
   async getAllMakesXml() {
     const now = Date.now();
-    const xmlString = ALL_MAKES;
-    this.logger.log(`XML response is received +${Date.now() - now}ms`);
-    return xmlString;
+    try {
+      const response = await fetch(this.allMakesXmlUrl);
+      const xmlString = await response.text();
+      this.logger.log(
+        `All makes XML response is received +${Date.now() - now}ms`,
+      );
+      return xmlString;
+    } catch (error) {
+      this.logger.error('error', error);
+      throw new Error(error);
+    }
+  }
+
+  async batchMakes(makes: Make[]): Promise<{ message: string }> {
+    const batchSize = constants.BATCH_SIZE;
+
+    // the following 2 lines left for estimation purposes only delete when going for staging or production
+    let b = 0;
+    const batchCount = 1; // should take about 40 secs for process 2 batches;
+
+    // Uncomment lines below for production, staging or updating all records in your database
+    // let b = 0;
+    // const batchCount = Math.ceil(makes.length / batchSize);
+
+    this.logger.log(`This run has ${batchCount} batch(es)`);
+
+    for (b; b < batchCount; b++) {
+      const batch = makes.slice(b * batchSize, (b + 1) * batchSize);
+      await this.makesBatchQueue.add('process-batch', {
+        batch,
+        batchNumber: b + 1,
+        batchSize,
+      });
+    }
+    const isQueueRunning = await this.checkQueueStatus();
+    if (isQueueRunning) {
+      this.logger.debug('Makes batch queues are running');
+    } else {
+      this.logger.debug('Makes batch queue is NOT running');
+    }
+
+    return { message: `Set queue for ${batchCount} batch(es)` };
+  }
+
+  async checkQueueStatus(): Promise<boolean> {
+    try {
+      const isPaused = await this.makesBatchQueue.isPaused();
+      const jobCounts = await this.makesBatchQueue.getJobCounts();
+      this.logger.debug(`${jobCounts} are running`);
+
+      // Check if the queue has active jobs or is not paused
+      const isRunning = !isPaused || jobCounts.active > 0;
+
+      return isRunning;
+    } catch (error) {
+      this.logger.error('Error checking queue status:', error);
+      return false;
+    }
   }
 
   async addVehicleTypes(makes: Make[]): Promise<Make[]> {
@@ -54,10 +111,9 @@ export class GovDataService {
 
   async getVehicleTypesForMake(makeId: string) {
     const now = Date.now();
+    const url = `${constants.GOV_DATA_URL}${constants.GET_VEHICLE_TYPES_FOR_MAKEID}/${makeId}?format=XML`;
     try {
-      const response = await fetch(
-        `${this.vehicleTypesUrl}${makeId}?format=XML`,
-      );
+      const response = await fetch(url);
       const xmlString = await response.text();
       this.logger.debug(
         `Make ID:${makeId} Vehicle types are received +${Date.now() - now}ms`,

@@ -16,7 +16,7 @@ export class MakesService {
           update: [
             {
               $set: {
-                name: make.name,
+                makeName: make.makeName,
                 makeId: make.makeId,
                 vehicleTypes: make.vehicleTypes || [],
               },

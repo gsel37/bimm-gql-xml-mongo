@@ -11,7 +11,7 @@ describe('MakesService', () => {
 
   const mockMake = {
     makeId: '123',
-    name: 'Test Make',
+    makeName: 'Test Make',
     vehicleTypes: [
       { typeId: '6', typeName: 'Trailer' },
       { typeId: '10', typeName: 'Incomplete Vehicle' },
@@ -58,7 +58,7 @@ describe('MakesService', () => {
             update: [
               {
                 $set: {
-                  name: mockMake.name,
+                  makeName: mockMake.makeName,
                   makeId: mockMake.makeId,
                   vehicleTypes: mockMake.vehicleTypes,
                 },

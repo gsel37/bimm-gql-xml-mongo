@@ -9,7 +9,7 @@ export function transformMakes(input: any): any[] {
 
   const mapped = allMakes?.map((m) => ({
     makeId: m.Make_ID?.[0],
-    name: m.Make_Name?.[0],
+    makeName: m.Make_Name?.[0],
   }));
 
   logger.log(`${mapped.length} records mapped to Make schema`);

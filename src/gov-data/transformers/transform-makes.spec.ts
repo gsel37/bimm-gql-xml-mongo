@@ -39,8 +39,8 @@ describe('transformMakes', () => {
     const result = transformMakes(input);
 
     expect(result).toEqual([
-      { makeId: '1', name: 'A' },
-      { makeId: '2', name: 'B' },
+      { makeId: '1', makeName: 'A' },
+      { makeId: '2', makeName: 'B' },
     ]);
 
     expect(mockLoggerInstance.log).toHaveBeenCalledWith(
@@ -99,8 +99,8 @@ describe('transformMakes', () => {
     const result = transformMakes(incompleteInput);
 
     expect(result).toEqual([
-      { makeId: '1', name: undefined },
-      { makeId: undefined, name: 'B' },
+      { makeId: '1', makeName: undefined },
+      { makeId: undefined, makeName: 'B' },
     ]);
 
     expect(mockLoggerInstance.log).toHaveBeenCalledWith(
