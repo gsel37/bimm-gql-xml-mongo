@@ -89,6 +89,12 @@ http://localhost:3000/gov-data/refresh
 
     ![VS Code Postman sample](./docs/images/Postman.png)
 
+### Mock XML data
+
+There is Mocks folder. It's here for the development purposes.
+Time to time the main website is going down.
+Please adjust the xmlString to this mock data
+
 ## Access GraphQL Playground
 
 Go to
